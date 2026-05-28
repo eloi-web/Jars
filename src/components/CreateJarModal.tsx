@@ -52,7 +52,7 @@ export function CreateJarModal({ isOpen, onClose }: Props) {
           
           <button
             type="submit"
-            className="mt-2 w-full py-4 bg-primary text-on-primary font-mono font-bold tracking-widest uppercase hover:bg-inverse-surface transition-transform active:translate-y-1 active:translate-x-1 hover:shadow-none"
+            className="mt-2 w-full py-4 bg-[#212121] text-white font-pixel font-bold tracking-widest uppercase text-lg hover:bg-black transition-transform active:scale-95 hover:shadow-none rounded"
           >
             Create & Deploy
           </button>

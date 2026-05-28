@@ -1,181 +1,77 @@
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, forwardRef } from 'react';
 import Matter from 'matter-js';
 
-export interface PhysicsWorkspaceRef {
-  dropText: (text: string) => void;
+export interface PhysicsWorkspaceRef {}
+
+interface PhysicsWorkspaceProps {
+  defaultText: string;
 }
 
-interface PhysicsWorkspaceProps {}
+interface LetterData {
+  id: string;
+  char: string;
+  targetX: number;
+  targetY: number;
+}
 
-export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspaceProps>((props, ref) => {
+const WALL_THICKNESS = 300;
+
+export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspaceProps>(({ defaultText }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
-  const renderRef = useRef<Matter.Render | null>(null);
-  const runnerRef = useRef<Matter.Runner | null>(null);
+  const animationFrameRef = useRef<number>(0);
   
-  const widthRef = useRef(window.innerWidth);
-  const heightRef = useRef(window.innerHeight);
-
-  const lettersRef = useRef<{ body: Matter.Body; char: string; wordId: string; index: number; originalWord: string }[]>([]);
-  const unbreakingLettersRef = useRef<Set<Matter.Body>>(new Set());
-
-  useImperativeHandle(ref, () => ({
-    dropText: (text: string) => {
-      if (!engineRef.current || !text.trim()) return;
-      
-      const width = widthRef.current;
-      const spawnX = width / 2;
-      const spawnY = 100;
-
-      const words = text.split(' ');
-      let charIndexGlobal = 0;
-      
-      const wordIdTemplate = Date.now().toString();
-
-      words.forEach((word, wordIndex) => {
-        const wordId = `${wordIdTemplate}-${wordIndex}`;
-        const chars = word.split('');
-        
-        chars.forEach((char, index) => {
-          setTimeout(() => {
-            const scatterX = spawnX + (Math.random() * 200 - 100);
-            const letter = spawnLetter(char, scatterX, spawnY, word, index, wordId);
-            
-            Matter.Body.setVelocity(letter, {
-              x: (Math.random() - 0.5) * 8,
-              y: Math.random() * 4 - 2,
-            });
-            Matter.Body.setAngularVelocity(letter, (Math.random() - 0.5) * 0.4);
-          }, charIndexGlobal * 80);
-          
-          charIndexGlobal++;
-        });
-      });
-    }
-  }));
-
-  const generateLetterTexture = (char: string, size: number) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = size * 2;
-    canvas.height = size * 2;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = `bold ${size * 1.5}px "Courier Prime", monospace`;
-      ctx.fillStyle = '#212121';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(char, size, size);
-    }
-    return canvas.toDataURL();
-  };
-
-  const spawnLetter = (char: string, x: number, y: number, originalWord: string, index: number, wordId: string) => {
-    const size = 20 + Math.random() * 12;
-    const letter = Matter.Bodies.rectangle(x, y, size, size, {
-      restitution: 0.3,
-      friction: 0.8,
-      density: 0.04,
-      render: {
-        sprite: {
-          texture: generateLetterTexture(char, size)
-        }
-      }
-    });
-
-    (letter as any).customData = {
-      char,
-      wordId,
-      index,
-      originalWord,
-      relativeX: (index * 22) - (originalWord.length * 11),
-      size
-    };
-
-    lettersRef.current.push({ body: letter, char, wordId, index, originalWord });
-    if (engineRef.current) {
-      Matter.Composite.add(engineRef.current.world, letter);
-    }
-    return letter;
-  };
+  const bodiesRef = useRef<Record<string, Matter.Body>>({});
+  const letterNodesRef = useRef<LetterData[]>([]);
+  const isFallingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !canvasRef.current) return;
+    
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Size setup
+    const updateSize = () => {
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
+      const pixelRatio = window.devicePixelRatio || 1;
+      canvas.width = w * pixelRatio;
+      canvas.height = h * pixelRatio;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.scale(pixelRatio, pixelRatio);
+      return { w, h };
+    };
+    
+    let { w, h } = updateSize();
 
-    const engine = Matter.Engine.create();
+    // Engine setup
+    const engine = Matter.Engine.create({
+      gravity: { x: 0, y: 1, scale: 0.0014 },
+      enableSleeping: true,
+      positionIterations: 8,
+      velocityIterations: 8,
+    });
     engineRef.current = engine;
     const world = engine.world;
 
-    const render = Matter.Render.create({
-      element: containerRef.current,
-      engine: engine,
-      options: {
-        width: widthRef.current,
-        height: heightRef.current,
-        wireframes: false,
-        background: 'transparent',
-        pixelRatio: window.devicePixelRatio
-      }
-    });
-    renderRef.current = render;
+    let floor: Matter.Body, leftWall: Matter.Body, rightWall: Matter.Body, ceiling: Matter.Body;
 
-    Matter.Render.run(render);
-    const runner = Matter.Runner.create();
-    runnerRef.current = runner;
-    Matter.Runner.run(runner, engine);
-
-    const wallOptions = { isStatic: true, render: { visible: false } };
-    let boundaries: Matter.Body[] = [];
-
-    const createBoundaries = () => {
-      const w = widthRef.current;
-      const h = heightRef.current;
-      const t = 60; // thickness
-      
-      if (boundaries.length > 0) {
-        Matter.Composite.remove(world, boundaries);
-      }
-
-      const ground = Matter.Bodies.rectangle(w / 2, h - 30 + t / 2, w, t, wallOptions);
-      const leftWall = Matter.Bodies.rectangle(-t / 2, h / 2, t, h, wallOptions);
-      const rightWall = Matter.Bodies.rectangle(w + t / 2, h / 2, t, h, wallOptions);
-      const ceiling = Matter.Bodies.rectangle(w / 2, -t / 2 - 200, w, t, wallOptions); // Higher ceiling
-
-      boundaries = [ground, leftWall, rightWall, ceiling];
-      Matter.Composite.add(world, boundaries);
+    const createWalls = () => {
+      floor = Matter.Bodies.rectangle(w / 2, h + WALL_THICKNESS / 2, w * 3, Math.max(WALL_THICKNESS, 60), { isStatic: true, friction: 0.8, restitution: 0.1 });
+      leftWall = Matter.Bodies.rectangle(-WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h * 3, { isStatic: true, friction: 0.5, restitution: 0.1 });
+      rightWall = Matter.Bodies.rectangle(w + WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h * 3, { isStatic: true, friction: 0.5, restitution: 0.1 });
+      ceiling = Matter.Bodies.rectangle(w / 2, -WALL_THICKNESS / 2, w * 3, WALL_THICKNESS, { isStatic: true, friction: 0.5, restitution: 0.1 });
+      Matter.World.add(world, [floor, leftWall, rightWall, ceiling]);
     };
-
-    createBoundaries();
-
-    const checkResize = () => {
-      if (widthRef.current !== window.innerWidth || heightRef.current !== window.innerHeight) {
-        widthRef.current = window.innerWidth;
-        heightRef.current = window.innerHeight;
-        render.canvas.width = window.innerWidth;
-        render.canvas.height = window.innerHeight;
-        createBoundaries();
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(checkResize);
-    resizeObserver.observe(document.body);
-
-    // Initial words drop
-    const dropInitialWords = () => {
-      const intro = "pixel jar".split(' ');
-      let delay = 500;
-      const wTemplate = Date.now().toString();
-      intro.forEach((word, wIdx) => {
-        word.split('').forEach((char, i) => {
-          setTimeout(() => spawnLetter(char, widthRef.current / 2 + (Math.random() * 80 - 40), 50, word, i, `${wTemplate}-${wIdx}`), delay);
-          delay += 100;
-        });
-        delay += 300;
-      });
-    };
-    dropInitialWords();
+    createWalls();
 
     // Mouse Interaction
-    const mouse = Matter.Mouse.create(render.canvas);
+    const mouse = Matter.Mouse.create(canvas);
     const mouseConstraint = Matter.MouseConstraint.create(engine, {
       mouse: mouse,
       constraint: {
@@ -183,116 +79,195 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
         render: { visible: false }
       }
     });
-    Matter.Composite.add(world, mouseConstraint);
-    
-    // Disable default scrolling on mouse wheel in the canvas
-    if (render.canvas.parentNode) {
-      (render.canvas as any).addEventListener('wheel', (e: Event) => e.preventDefault(), { passive: false });
-    }
+    Matter.World.add(world, mouseConstraint);
 
-    let lastClickTime = 0;
-    Matter.Events.on(mouseConstraint, 'mousedown', (event) => {
-      const currentTime = new Date().getTime();
-      const clickDelay = currentTime - lastClickTime;
-      const mousePosition = event.mouse.position;
+    // Initial words prep
+    const buildStaticText = (wPx: number, hPx: number) => {
+      const words = defaultText.split(' ');
+      const newLetterNodes: LetterData[] = [];
+      const newBodies: Record<string, Matter.Body> = {};
       
-      if (clickDelay < 350) {
-        // Double click
-        const bodies = Matter.Composite.allBodies(world);
-        const clickedBodies = Matter.Query.point(bodies, mousePosition);
-        
-        if (clickedBodies.length > 0) {
-          const clickedBody = clickedBodies[0];
-          const data = (clickedBody as any).customData;
+      const charRadius = 14; 
+      const charWidth = 20;
+      const charHeight = 40;
+      
+      let lines: string[][] = [];
+      let currentLine: string[] = [];
+      let currentLineWidth = 0;
+      const maxLineWidth = Math.min(800, wPx - 80);
+
+      words.forEach(word => {
+        const wordWidth = word.length * charWidth;
+        if (currentLineWidth + wordWidth > maxLineWidth && currentLine.length > 0) {
+          lines.push(currentLine);
+          currentLine = [];
+          currentLineWidth = 0;
+        }
+        word.split('').forEach(c => currentLine.push(c));
+        currentLine.push(' ');
+        currentLineWidth += wordWidth + charWidth;
+      });
+      if (currentLine.length > 0) lines.push(currentLine);
+
+      const totalHeight = lines.length * charHeight;
+      const startY = hPx / 2 - totalHeight / 2;
+
+      let idCounter = 0;
+
+      lines.forEach((line, lineIndex) => {
+        const lineWidth = line.length * charWidth;
+        const startX = wPx / 2 - lineWidth / 2;
+
+        line.forEach((char, charIndex) => {
+          if (char === ' ') return; // don't push bodies for space
+          const x = startX + charIndex * charWidth;
+          const y = startY + lineIndex * charHeight;
+          const id = `letter-${idCounter++}`;
           
-          if (data && data.wordId) {
-            const wordId = data.wordId;
-            lettersRef.current.forEach(item => {
-              const bData = (item.body as any).customData;
-              if (bData && bData.wordId === wordId) {
-                Matter.Body.setStatic(item.body, false);
-                unbreakingLettersRef.current.add(item.body);
-                Matter.Body.setVelocity(item.body, { x: (Math.random() - 0.5) * 5, y: -12 });
-              }
+          newLetterNodes.push({ id, char, targetX: x, targetY: y });
+          
+          if (!bodiesRef.current[id]) {
+            const body = Matter.Bodies.circle(x, y, charRadius, {
+              isStatic: true,
+              restitution: 0.3,
+              friction: 0.7,
+              frictionStatic: 0.9,
+              density: 0.002,
+              slop: 0.02,
             });
+            newBodies[id] = body;
+          } else {
+             newBodies[id] = bodiesRef.current[id];
           }
-        }
-      } else {
-        // Single click - release if unbreaking
-        const bodies = Matter.Composite.allBodies(world);
-        const clickedBodies = Matter.Query.point(bodies, mousePosition);
-        
-        if (clickedBodies.length > 0) {
-          const clickedBody = clickedBodies[0];
-          if (unbreakingLettersRef.current.has(clickedBody)) {
-            const data = (clickedBody as any).customData;
-            if (data && data.wordId) {
-              const wordId = data.wordId;
-              lettersRef.current.forEach(item => {
-                const bData = (item.body as any).customData;
-                if (bData && bData.wordId === wordId && unbreakingLettersRef.current.has(item.body)) {
-                  unbreakingLettersRef.current.delete(item.body);
-                  Matter.Body.setStatic(item.body, false);
-                  Matter.Body.setVelocity(item.body, { x: (Math.random() - 0.5) * 5, y: -5 });
-                }
-              });
-            }
-          }
-        }
-      }
-      
-      lastClickTime = currentTime;
-    });
+        });
+      });
 
-    Matter.Events.on(engine, 'beforeUpdate', () => {
-      const centerX = widthRef.current / 2;
-      const centerY = heightRef.current / 2.5; // Slightly above center
+      // Add only new ones, if needed, but here we just rebuild positions.
+      const toAdd = Object.values(newBodies).filter(b => !bodiesRef.current[Object.keys(newBodies).find(k => newBodies[k] === b)!]);
+      Matter.World.add(world, toAdd);
       
-      unbreakingLettersRef.current.forEach(body => {
-        const data = (body as any).customData;
-        if (!data) return;
-        
-        const targetX = centerX + data.relativeX;
-        const targetY = centerY;
-        
-        const dx = targetX - body.position.x;
-        const dy = targetY - body.position.y;
-        
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 5) {
-          Matter.Body.applyForce(body, body.position, {
-            x: dx * 0.00015,
-            y: dy * 0.00015 - engine.gravity.y * engine.gravity.scale * body.mass 
-          });
-          Matter.Body.setAngularVelocity(body, (body.angularVelocity as number) * 0.85);
-        } else {
-          Matter.Body.setPosition(body, { x: targetX, y: targetY });
-          Matter.Body.setAngle(body, 0);
-          Matter.Body.setVelocity(body, { x: 0, y: 0 });
-          Matter.Body.setAngularVelocity(body, 0);
-          Matter.Body.setStatic(body, true);
+      bodiesRef.current = newBodies;
+      letterNodesRef.current = newLetterNodes;
+    };
+
+    const render = () => {
+      ctx.clearRect(0, 0, w, h);
+      
+      ctx.font = `500 32px 'DM Sans', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#212121';
+
+      letterNodesRef.current.forEach(node => {
+        const body = bodiesRef.current[node.id];
+        if (!body) return;
+
+        ctx.save();
+        ctx.translate(body.position.x, body.position.y);
+        ctx.rotate(body.angle);
+        ctx.fillText(node.char, 0, 0);
+        ctx.restore();
+      });
+    };
+
+    buildStaticText(w, h);
+    render(); // Initial render
+
+    // Render loop
+    const tick = () => {
+      Matter.Engine.update(engine, 1000 / 60);
+
+      const bodies = bodiesRef.current;
+      const fall = isFallingRef.current;
+
+      letterNodesRef.current.forEach(node => {
+        const body = bodies[node.id];
+        if (!body) return;
+
+        if (!fall) {
+            // Restore smoothly
+            Matter.Body.setStatic(body, false);
+            
+            const dx = node.targetX - body.position.x;
+            const dy = node.targetY - body.position.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 2) {
+               const velocityX = dx * 0.08;
+               const velocityY = dy * 0.08;
+               const forceX = (velocityX - body.velocity.x) * 0.005;
+               const forceY = (velocityY - body.velocity.y) * 0.005 - engine.gravity.y * engine.gravity.scale * body.mass;
+               Matter.Body.applyForce(body, body.position, { x: forceX, y: forceY });
+               Matter.Body.setAngularVelocity(body, (body.angularVelocity as number) * 0.85);
+            } else {
+               Matter.Body.setPosition(body, { x: node.targetX, y: node.targetY });
+               Matter.Body.setAngle(body, 0);
+               Matter.Body.setVelocity(body, { x: 0, y: 0 });
+               Matter.Body.setAngularVelocity(body, 0);
+               Matter.Body.setStatic(body, true);
+               if (body.isSleeping) Matter.Sleeping.set(body, false);
+            }
         }
       });
-    });
 
-    return () => {
-      resizeObserver.disconnect();
-      Matter.Render.stop(render);
-      Matter.Runner.stop(runner);
-      if (engineRef.current) {
-        Matter.Engine.clear(engineRef.current);
+      render();
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        isFallingRef.current = true;
+        Object.values(bodiesRef.current).forEach(body => {
+          Matter.Body.setStatic(body, false);
+          if (body.isSleeping) Matter.Sleeping.set(body, false);
+          if (Math.abs(body.velocity.y) < 0.1 && Math.abs(body.velocity.x) < 0.1) {
+            Matter.Body.setVelocity(body, {
+                x: (Math.random() - 0.5) * 4,
+                y: Math.random() * 2,
+            });
+            Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
+          }
+        });
       }
-      if (render.canvas) {
-        render.canvas.remove();
+      if (e.key === 'Escape') {
+        isFallingRef.current = false;
+        Object.values(bodiesRef.current).forEach(body => {
+           if (body.isSleeping) Matter.Sleeping.set(body, false);
+        });
       }
     };
-  }, []);
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    const resizeHandler = () => {
+      const size = updateSize();
+      w = size.w;
+      h = size.h;
+      Matter.Body.setPosition(floor, { x: w / 2, y: h + WALL_THICKNESS / 2 });
+      Matter.Body.setPosition(leftWall, { x: -WALL_THICKNESS / 2, y: h / 2 });
+      Matter.Body.setPosition(rightWall, { x: w + WALL_THICKNESS / 2, y: h / 2 });
+      Matter.Body.setPosition(ceiling, { x: w / 2, y: -WALL_THICKNESS / 2 });
+      buildStaticText(w, h);
+      render(); // force render on resize
+    };
+    window.addEventListener('resize', resizeHandler);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', resizeHandler);
+      cancelAnimationFrame(animationFrameRef.current);
+      Matter.Engine.clear(engine);
+    };
+  }, [defaultText]);
 
   return (
     <div 
-      ref={containerRef} 
-      className="absolute inset-0 z-0 pointer-events-auto overflow-hidden" 
-    />
+      ref={containerRef}
+      className="absolute inset-0 z-0 overflow-hidden touch-none pointer-events-auto"
+    >
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+    </div>
   );
 });

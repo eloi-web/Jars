@@ -1,20 +1,41 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# JARS
 
-# Run and deploy your AI Studio app
+JARS is an interactive web application that blends physics constraints and word typography into an intuitive message-in-a-jar visualization engine. Build and interact with virtual text objects!
 
-This contains everything you need to run your app locally.
+## Architecture
 
-View your app in AI Studio: https://ai.studio/apps/6449ec99-d89f-4781-a698-009823c74bd9
+This application is built using:
+- **React 19**
+- **Vite** (as the build toolkit)
+- **Tailwind CSS v4** (for styling)
+- **Matter.js** (for physics simulation of characters)
 
-## Run Locally
+Everything is strictly typed with **TypeScript**.
 
-**Prerequisites:**  Node.js
+## Running Locally
 
+We recommend using **pnpm** for package management, to ensure robust and blazing fast dependency resolution.
+
+### Development
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   pnpm install
+   ```
+
+2. Start the local Vite server:
+   ```bash
+   pnpm run dev
+   ```
+
+### Production Build
+
+1. Build the frontend into static files (emits to `dist/` folder):
+   ```bash
+   pnpm run build
+   ```
+
+2. To preview the production bundle locally:
+   ```bash
+   pnpm run preview
+   ```

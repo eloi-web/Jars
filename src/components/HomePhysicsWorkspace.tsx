@@ -45,15 +45,16 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
       const h = heightRef.current;
       const t = 100;
       
-      if (boundaries.length > 0) {
-        Matter.Composite.remove(world, boundaries);
-      }
+      if (boundaries.length > 0) Matter.Composite.remove(world, boundaries);
 
-      const ground = Matter.Bodies.rectangle(w / 2, h + t/2, w * 2, t, { isStatic: true, render: { visible: false } });
-      const leftWall = Matter.Bodies.rectangle(-t/2, h / 2, t, h * 2, { isStatic: true, render: { visible: false } });
-      const rightWall = Matter.Bodies.rectangle(w + t/2, h / 2, t, h * 2, { isStatic: true, render: { visible: false } });
+      const boundaryOptions = { isStatic: true, render: { visible: false, fillStyle: 'transparent', strokeStyle: 'transparent' } };
+
+      const ground = Matter.Bodies.rectangle(w / 2, h + t/2, w * 2, t, boundaryOptions);
+      const leftWall = Matter.Bodies.rectangle(-t/2, h / 2, t, h * 2, boundaryOptions);
+      const rightWall = Matter.Bodies.rectangle(w + t/2, h / 2, t, h * 2, boundaryOptions);
+      const ceiling = Matter.Bodies.rectangle(w / 2, -t/2 - 500, w * 2, t, boundaryOptions); // prevent them escaping upward intensely 
       
-      boundaries = [ground, leftWall, rightWall];
+      boundaries = [ground, leftWall, rightWall, ceiling];
       Matter.Composite.add(world, boundaries);
     };
     createBoundaries();
@@ -67,7 +68,6 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
         createBoundaries();
       }
     };
-
     const resizeObserver = new ResizeObserver(checkResize);
     resizeObserver.observe(document.body);
 
@@ -75,33 +75,47 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
     const mouseConstraint = Matter.MouseConstraint.create(engine, {
       mouse: mouse,
       constraint: {
-        stiffness: 0.1,
+        stiffness: 0.2, // let them drag snappily
         render: { visible: false }
       }
     });
     Matter.Composite.add(world, mouseConstraint);
     render.mouse = mouse;
 
+    // Distinguish clicking vs dragging
+    let startPoint = { x: 0, y: 0 };
     Matter.Events.on(mouseConstraint, 'mousedown', (event) => {
-      const bodies = Matter.Composite.allBodies(world);
-      const clickedBodies = Matter.Query.point(bodies, event.mouse.position);
-      // If a jar (which has the texture) is clicked
-      if (clickedBodies.length > 0) {
-        const hasJar = clickedBodies.some(b => b.render?.sprite?.texture);
-        if (hasJar) {
+      startPoint = { x: event.mouse.position.x, y: event.mouse.position.y };
+    });
+
+    Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
+      const endPoint = { x: event.mouse.position.x, y: event.mouse.position.y };
+      const dist = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+      if (dist < 5) { // It's a clean click
+        const bodies = Matter.Composite.allBodies(world);
+        const clickedBodies = Matter.Query.point(bodies, event.mouse.position);
+        if (clickedBodies.some(b => b.render?.sprite?.texture)) {
           onJarClick();
         }
       }
     });
 
+    // Custom pointer cursor for jars
+    Matter.Events.on(engine, 'afterUpdate', () => {
+       const bodies = Matter.Composite.allBodies(world);
+       const hovered = Matter.Query.point(bodies, mouse.position);
+       const objHovered = hovered.some(b => b.render?.sprite?.texture);
+       render.canvas.style.cursor = objHovered ? 'pointer' : 'default';
+    });
+
     const jarImage = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDLsOQwV_Y13GK0aAL-lQo2WQjVthe5AmnlzLBQIW0UlPPr6uQtMWbNBJturS--CfNiNSkcWszuR9ThNS21RzeMIgVWxCkRAve7iOoEqLkTMnys5ZdlbkeEPK5XN04ahzUQrqnX72cEGchwvqzlDE-KXJnrqd7vRl7x7QY40g6oqvNRfDelK76yk7A5vJ-AXu-JsEIRH-4mqHKfDAZq6p7o-Bljeu9trHYp28Y_hxBBBZVQsknu4gbctLdGFeXZLCPdOO86FX9BV_Nd';
-    const numJars = window.innerWidth > 768 ? 80 : 40;
+    const numJars = window.innerWidth > 768 ? 200 : 100;
     
     let timeoutIds: ReturnType<typeof setTimeout>[] = [];
     
     for (let i = 0; i < numJars; i++) {
       const tid = setTimeout(() => {
-        const size = Math.random() * 40 + 40;
+        const size = Math.random() * 110 + 40; // Sizes between 40 and 150
         const x = Math.random() * widthRef.current;
         const y = -100 - (Math.random() * 200);
         
@@ -114,12 +128,12 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
             }
           },
           restitution: 0.4,
-          friction: 0.1,
+          friction: 0.2,
           density: 0.05,
           angle: Math.random() * Math.PI * 2
         });
         Matter.Composite.add(world, jar);
-      }, i * 50);
+      }, i * 20); // Faster dropping
       timeoutIds.push(tid);
     }
 

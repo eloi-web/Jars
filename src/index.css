@@ -19,9 +19,10 @@
   --color-background: #fdf8f8;
   --color-on-background: #1c1b1b;
   
-  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-display: 'Instrument Serif', serif;
+  --font-pixel: 'Pixelify Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
   --font-mono: 'Courier Prime', monospace;
-  --font-body: 'Bricolage Grotesque', sans-serif;
 }
 
 body {
@@ -30,4 +31,17 @@ body {
   overflow: hidden;
   margin: 0;
   padding: 0;
+}
+
+@layer utilities {
+  .animate-wiggle:hover {
+    animation: wiggle 1.5s ease-in-out infinite;
+  }
+  @keyframes wiggle {
+    0% { transform: translateX(0) rotate(-3deg); }
+    25% { transform: translateX(10px) rotate(3deg); }
+    50% { transform: translateX(0) rotate(-3deg); }
+    75% { transform: translateX(-10px) rotate(3deg); }
+    100% { transform: translateX(0) rotate(-3deg); }
+  }
 }
