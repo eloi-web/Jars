@@ -14,7 +14,7 @@ Everything is strictly typed with **TypeScript**.
 
 ## Running Locally
 
-We recommend using **pnpm** for package management, to ensure robust and blazing fast dependency resolution.
+I recommend using **pnpm** for package management, to ensure robust and blazing fast dependency resolution.
 
 ### Development
 

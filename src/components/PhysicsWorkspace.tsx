@@ -12,9 +12,24 @@ interface LetterData {
   char: string;
   targetX: number;
   targetY: number;
+  lineIdx: number;
+  charIdx: number;
+}
+
+interface ReviveState {
+  startTime: number;
+  totalDurationMs: number;
+  starts: Record<string, { x: number; y: number; angle: number }>;
+  targets: Record<string, { x: number; y: number; angle: number; startDelayMs: number }>;
 }
 
 const WALL_THICKNESS = 300;
+const MOVE_DURATION_MS = 600;
+const INTER_LINE_DELAY_MS = 100;
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
 
 export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspaceProps>(({ defaultText }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,7 +39,11 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
   
   const bodiesRef = useRef<Record<string, Matter.Body>>({});
   const letterNodesRef = useRef<LetterData[]>([]);
-  const isFallingRef = useRef<boolean>(false);
+  
+  const stateRef = useRef<{ mode: 'static' | 'falling' | 'reviving'; reviveState: ReviveState | null }>({
+    mode: 'static',
+    reviveState: null
+  });
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -124,7 +143,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
           const y = startY + lineIndex * charHeight;
           const id = `letter-${idCounter++}`;
           
-          newLetterNodes.push({ id, char, targetX: x, targetY: y });
+          newLetterNodes.push({ id, char, targetX: x, targetY: y, lineIdx: lineIndex, charIdx: charIndex });
           
           if (!bodiesRef.current[id]) {
             const body = Matter.Bodies.circle(x, y, charRadius, {
@@ -134,6 +153,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
               frictionStatic: 0.9,
               density: 0.002,
               slop: 0.02,
+              label: `letter:${char}`,
             });
             newBodies[id] = body;
           } else {
@@ -178,37 +198,55 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       Matter.Engine.update(engine, 1000 / 60);
 
       const bodies = bodiesRef.current;
-      const fall = isFallingRef.current;
+      const sm = stateRef.current;
 
-      letterNodesRef.current.forEach(node => {
-        const body = bodies[node.id];
-        if (!body) return;
-
-        if (!fall) {
-            // Restore smoothly
-            Matter.Body.setStatic(body, false);
-            
-            const dx = node.targetX - body.position.x;
-            const dy = node.targetY - body.position.y;
-            const dist = Math.hypot(dx, dy);
-
-            if (dist > 2) {
-               const velocityX = dx * 0.08;
-               const velocityY = dy * 0.08;
-               const forceX = (velocityX - body.velocity.x) * 0.005;
-               const forceY = (velocityY - body.velocity.y) * 0.005 - engine.gravity.y * engine.gravity.scale * body.mass;
-               Matter.Body.applyForce(body, body.position, { x: forceX, y: forceY });
-               Matter.Body.setAngularVelocity(body, (body.angularVelocity as number) * 0.85);
-            } else {
+      if (sm.mode === 'static') {
+         // keep perfectly aligned just in case
+         letterNodesRef.current.forEach(node => {
+            const body = bodies[node.id];
+            if (body && !body.isStatic) {
+               Matter.Body.setStatic(body, true);
                Matter.Body.setPosition(body, { x: node.targetX, y: node.targetY });
                Matter.Body.setAngle(body, 0);
-               Matter.Body.setVelocity(body, { x: 0, y: 0 });
-               Matter.Body.setAngularVelocity(body, 0);
-               Matter.Body.setStatic(body, true);
-               if (body.isSleeping) Matter.Sleeping.set(body, false);
             }
-        }
-      });
+         });
+      } else if (sm.mode === 'reviving' && sm.reviveState) {
+         const now = performance.now();
+         const elapsed = now - sm.reviveState.startTime;
+         const remainingIds: string[] = [];
+         
+         letterNodesRef.current.forEach(node => {
+            const body = bodies[node.id];
+            const start = sm.reviveState!.starts[node.id];
+            const target = sm.reviveState!.targets[node.id];
+            
+            if (body && start && target) {
+                const localElapsed = elapsed - target.startDelayMs;
+                if (localElapsed >= MOVE_DURATION_MS) {
+                    Matter.Body.setPosition(body, { x: target.x, y: target.y });
+                    Matter.Body.setAngle(body, 0);
+                    // body is technically static during tween, let's keep it static
+                    Matter.Body.setStatic(body, true);
+                } else if (localElapsed > 0) {
+                    const t = localElapsed / MOVE_DURATION_MS;
+                    const eased = easeOutCubic(t);
+                    Matter.Body.setPosition(body, {
+                        x: start.x + (target.x - start.x) * eased,
+                        y: start.y + (target.y - start.y) * eased,
+                    });
+                    Matter.Body.setAngle(body, start.angle + (target.angle - start.angle) * eased);
+                    remainingIds.push(node.id); // still moving
+                } else {
+                    remainingIds.push(node.id); // hasn't started moving yet
+                }
+            }
+         });
+
+         if (elapsed >= sm.reviveState.totalDurationMs) {
+             sm.mode = 'static';
+             sm.reviveState = null;
+         }
+      }
 
       render();
       animationFrameRef.current = requestAnimationFrame(tick);
@@ -217,25 +255,54 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
     animationFrameRef.current = requestAnimationFrame(tick);
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const sm = stateRef.current;
       if (e.key === 'Enter') {
-        isFallingRef.current = true;
-        Object.values(bodiesRef.current).forEach(body => {
-          Matter.Body.setStatic(body, false);
-          if (body.isSleeping) Matter.Sleeping.set(body, false);
-          if (Math.abs(body.velocity.y) < 0.1 && Math.abs(body.velocity.x) < 0.1) {
-            Matter.Body.setVelocity(body, {
-                x: (Math.random() - 0.5) * 4,
-                y: Math.random() * 2,
+        if (sm.mode !== 'falling') {
+            sm.mode = 'falling';
+            sm.reviveState = null;
+
+            Object.values(bodiesRef.current).forEach(body => {
+              Matter.Body.setStatic(body, false);
+              if (body.isSleeping) Matter.Sleeping.set(body, false);
+              
+              Matter.Body.setVelocity(body, {
+                  x: (Math.random() - 0.5) * 2.5,
+                  y: Math.random() * 1.5,
+              });
+              Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.18);
             });
-            Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
-          }
-        });
+        }
       }
       if (e.key === 'Escape') {
-        isFallingRef.current = false;
-        Object.values(bodiesRef.current).forEach(body => {
-           if (body.isSleeping) Matter.Sleeping.set(body, false);
-        });
+        if (sm.mode !== 'reviving' && sm.mode !== 'static') {
+            sm.mode = 'reviving';
+            
+            let maxDelay = 0;
+            const starts: Record<string, {x:number, y:number, angle:number}> = {};
+            const targets: Record<string, {x:number, y:number, angle:number, startDelayMs:number}> = {};
+
+            letterNodesRef.current.forEach(node => {
+                const body = bodiesRef.current[node.id];
+                if (!body) return;
+                
+                const startDelayMs = node.lineIdx * INTER_LINE_DELAY_MS;
+                if (startDelayMs > maxDelay) maxDelay = startDelayMs;
+
+                starts[node.id] = { x: body.position.x, y: body.position.y, angle: body.angle };
+                targets[node.id] = { x: node.targetX, y: node.targetY, angle: 0, startDelayMs };
+                
+                // Freeze body dynamics to give pure tween control
+                Matter.Body.setStatic(body, true);
+                if (body.isSleeping) Matter.Sleeping.set(body, false);
+            });
+
+            sm.reviveState = {
+                startTime: performance.now(),
+                totalDurationMs: maxDelay + MOVE_DURATION_MS,
+                starts,
+                targets
+            };
+        }
       }
     };
 
@@ -249,7 +316,19 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       Matter.Body.setPosition(leftWall, { x: -WALL_THICKNESS / 2, y: h / 2 });
       Matter.Body.setPosition(rightWall, { x: w + WALL_THICKNESS / 2, y: h / 2 });
       Matter.Body.setPosition(ceiling, { x: w / 2, y: -WALL_THICKNESS / 2 });
+      
+      // Update targets on resize
       buildStaticText(w, h);
+      
+      if (stateRef.current.mode === 'static') {
+          letterNodesRef.current.forEach(node => {
+              const body = bodiesRef.current[node.id];
+              if (body) {
+                  Matter.Body.setPosition(body, { x: node.targetX, y: node.targetY });
+                  Matter.Body.setAngle(body, 0);
+              }
+          });
+      }
       render(); // force render on resize
     };
     window.addEventListener('resize', resizeHandler);
