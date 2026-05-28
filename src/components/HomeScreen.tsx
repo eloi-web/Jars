@@ -29,7 +29,7 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate }: Props
           <img
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLsOQwV_Y13GK0aAL-lQo2WQjVthe5AmnlzLBQIW0UlPPr6uQtMWbNBJturS--CfNiNSkcWszuR9ThNS21RzeMIgVWxCkRAve7iOoEqLkTMnys5ZdlbkeEPK5XN04ahzUQrqnX72cEGchwvqzlDE-KXJnrqd7vRl7x7QY40g6oqvNRfDelK76yk7A5vJ-AXu-JsEIRH-4mqHKfDAZq6p7o-Bljeu9trHYp28Y_hxBBBZVQsknu4gbctLdGFeXZLCPdOO86FX9BV_Nd"
             alt="Text Jar"
-            className="w-[150px] md:w-[180px] lg:w-[200px] object-contain select-none mb-4 animate-wiggle pointer-events-auto cursor-default"
+            className="w-37.5 md:w-45 lg:w-50 object-contain select-none mb-4 animate-wiggle pointer-events-auto cursor-default"
             draggable="false"
           />
           <button
