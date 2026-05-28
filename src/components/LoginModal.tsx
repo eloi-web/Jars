@@ -10,7 +10,7 @@ export function LoginModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-surface rounded-2xl w-full max-w-md p-8 shadow-xl relative animate-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold font-display text-primary">Welcome back</h2>
@@ -41,9 +41,9 @@ export function LoginModal({ isOpen, onClose }: Props) {
           </button>
 
           <div className="relative flex items-center py-4">
-            <div className="flex-grow border-t-2 border-outline-variant"></div>
-            <span className="flex-shrink-0 mx-4 text-on-surface-variant text-sm font-pixel font-bold uppercase">or</span>
-            <div className="flex-grow border-t-2 border-outline-variant"></div>
+            <div className="grow border-t-2 border-outline-variant"></div>
+            <span className="shrink-0 mx-4 text-on-surface-variant text-sm font-pixel font-bold uppercase">or</span>
+            <div className="grow border-t-2 border-outline-variant"></div>
           </div>
 
           <button className="w-full border-2 border-outline-variant text-[#212121] bg-surface rounded py-3 font-pixel font-bold uppercase text-lg tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-3">
