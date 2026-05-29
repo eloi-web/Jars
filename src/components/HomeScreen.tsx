@@ -27,7 +27,7 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate }: Props
       <main className="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
         <div className="relative flex flex-col items-center group">
           <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLsOQwV_Y13GK0aAL-lQo2WQjVthe5AmnlzLBQIW0UlPPr6uQtMWbNBJturS--CfNiNSkcWszuR9ThNS21RzeMIgVWxCkRAve7iOoEqLkTMnys5ZdlbkeEPK5XN04ahzUQrqnX72cEGchwvqzlDE-KXJnrqd7vRl7x7QY40g6oqvNRfDelK76yk7A5vJ-AXu-JsEIRH-4mqHKfDAZq6p7o-Bljeu9trHYp28Y_hxBBBZVQsknu4gbctLdGFeXZLCPdOO86FX9BV_Nd"
+            src="/jar-hero.png"
             alt="Text Jar"
             className="w-37.5 md:w-45 lg:w-50 object-contain select-none mb-4 animate-wiggle pointer-events-auto cursor-default"
             draggable="false"
