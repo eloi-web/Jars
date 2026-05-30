@@ -1,13 +1,16 @@
 import React from 'react';
 import { HomePhysicsWorkspace } from './HomePhysicsWorkspace';
+import { User } from '../App';
 
 interface Props {
   onNavigateToJar: () => void;
   onOpenLogin: () => void;
   onOpenCreate: () => void;
+  user: User | null;
+  onLogout: () => void;
 }
 
-export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate }: Props) {
+export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, onLogout }: Props) {
   return (
     <div className="h-screen w-full relative bg-surface overflow-hidden flex flex-col">
       <HomePhysicsWorkspace onJarClick={onNavigateToJar} />
@@ -15,12 +18,27 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate }: Props
       <header className="z-10 flex justify-end items-center w-full px-6 md:px-10 py-6 pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-end">
           <span className="font-pixel text-on-surface-variant text-sm md:text-base tracking-widest mb-1">just a jar</span>
-          <button
-            onClick={onOpenLogin}
-            className="font-pixel text-primary hover:underline underline-offset-4 text-xl md:text-2xl font-bold"
-          >
-            Login
-          </button>
+          {user ? (
+            <div className="flex items-center gap-3">
+              {user.avatar && (
+                <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+              )}
+              <span className="font-pixel text-primary text-base font-bold">{user.name}</span>
+              <button
+                onClick={onLogout}
+                className="font-pixel text-on-surface-variant hover:text-primary underline underline-offset-4 text-sm"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="font-pixel text-primary hover:underline underline-offset-4 text-xl md:text-2xl font-bold"
+            >
+              Login
+            </button>
+          )}
         </div>
       </header>
 
