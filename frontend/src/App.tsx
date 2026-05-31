@@ -20,6 +20,22 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   // Access token lives only in memory — never in localStorage
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(() => {
+    // Persist preference in localStorage
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleDark = () => setIsDark(prev => !prev);
 
   // Refresh the access token using the httpOnly refresh cookie
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
@@ -92,6 +108,8 @@ export default function App() {
           onOpenCreate={() => setIsCreateOpen(true)}
           user={user}
           onLogout={handleLogout}
+          isDark={isDark}
+          onToggleDark={toggleDark}
         />
       )}
 
