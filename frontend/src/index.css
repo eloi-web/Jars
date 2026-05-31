@@ -18,11 +18,37 @@
   --color-inverse-on-surface: #f4f0ef;
   --color-background: #fdf8f8;
   --color-on-background: #1c1b1b;
-  
+
   --font-display: 'Instrument Serif', serif;
   --font-pixel: 'Pixelify Sans', sans-serif;
   --font-body: 'DM Sans', sans-serif;
   --font-mono: 'Courier Prime', monospace;
+}
+
+/* Dark mode — override every CSS variable that drives our color system */
+.dark {
+  --color-surface: #1e1e1e;
+  --color-surface-dim: #131313;
+  --color-surface-bright: #2a2a2a;
+  --color-surface-container-lowest: #111111;
+  --color-surface-container-low: #1a1a1a;
+  --color-surface-container: #1e1e1e;
+  --color-primary: #e8e8e8;
+  --color-secondary: #b0b0b0;
+  --color-accent: #6e6e6e;
+  --color-on-surface: #e8e8e8;
+  --color-on-surface-variant: #a0a0a0;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #333333;
+  --color-inverse-surface: #e8e8e8;
+  --color-inverse-on-surface: #1e1e1e;
+  --color-background: #1a1a1a;
+  --color-on-background: #e8e8e8;
+}
+
+/* Invert the falling jar sprites to white on dark background */
+.dark .jar-canvas-container {
+  filter: invert(1) brightness(0.9);
 }
 
 body {
@@ -37,11 +63,26 @@ body {
   .animate-wiggle:hover {
     animation: wiggle 1.5s ease-in-out infinite;
   }
+
   @keyframes wiggle {
-    0% { transform: translateX(0) rotate(-3deg); }
-    25% { transform: translateX(10px) rotate(3deg); }
-    50% { transform: translateX(0) rotate(-3deg); }
-    75% { transform: translateX(-10px) rotate(3deg); }
-    100% { transform: translateX(0) rotate(-3deg); }
+    0% {
+      transform: translateX(0) rotate(-3deg);
+    }
+
+    25% {
+      transform: translateX(10px) rotate(3deg);
+    }
+
+    50% {
+      transform: translateX(0) rotate(-3deg);
+    }
+
+    75% {
+      transform: translateX(-10px) rotate(3deg);
+    }
+
+    100% {
+      transform: translateX(0) rotate(-3deg);
+    }
   }
 }
