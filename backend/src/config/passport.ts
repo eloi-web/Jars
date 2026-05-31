@@ -28,7 +28,7 @@ passport.use(
                 return done(err as Error);
             }
         }
-    )
+    ) as any
 );
 
 // Not using session-based auth (JWT only), but passport requires these
