@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #fdf8f8;
+  --color-surface-dim: #ddd9d8;
+  --color-surface-bright: #fdf8f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f7f3f2;
+  --color-surface-container: #f1f1f1;
+  --color-primary: #212121;
+  --color-secondary: #505050;
+  --color-accent: #a0a0a0;
+  --color-on-surface: #212121;
+  --color-on-surface-variant: #6e6e6e;
+  --color-surface-container-high: #ebe7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-inverse-surface: #313030;
+  --color-inverse-on-surface: #f4f0ef;
+  --color-background: #fdf8f8;
+  --color-on-background: #1c1b1b;
+  
+  --font-display: 'Instrument Serif', serif;
+  --font-pixel: 'Pixelify Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'Courier Prime', monospace;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+@layer utilities {
+  .animate-wiggle:hover {
+    animation: wiggle 1.5s ease-in-out infinite;
+  }
+  @keyframes wiggle {
+    0% { transform: translateX(0) rotate(-3deg); }
+    25% { transform: translateX(10px) rotate(3deg); }
+    50% { transform: translateX(0) rotate(-3deg); }
+    75% { transform: translateX(-10px) rotate(3deg); }
+    100% { transform: translateX(0) rotate(-3deg); }
+  }
+}
