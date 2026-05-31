@@ -147,5 +147,5 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
     };
   }, [onJarClick]);
 
-  return <div ref={containerRef} className="absolute inset-0 z-0 pointer-events-auto" />;
+  return <div ref={containerRef} className="absolute inset-0 z-0 pointer-events-auto jar-canvas-container" />;
 };
