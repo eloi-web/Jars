@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { User } from '../App';
+import { User, JarData } from '../App';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 const MAX_CHARS = 2000;
@@ -11,9 +11,11 @@ interface Props {
   accessToken: string | null;
   user: User | null;
   onOpenLogin: () => void;
+  onJarCreated: (jar: JarData) => void;
 }
 
-export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin }: Props) {
+export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin, onJarCreated }: Props) {
+  const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ message, isPublic }),
+        body: JSON.stringify({ title: title.trim() || undefined, message, isPublic }),
       });
 
       if (!res.ok) {
@@ -47,10 +49,12 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
         return;
       }
 
-      // Success — reset and close
+      const jar: JarData = await res.json();
+      // Reset form
+      setTitle('');
       setMessage('');
       setIsPublic(true);
-      onClose();
+      onJarCreated(jar);
     } catch {
       setError('Could not reach the server. Please try again.');
     } finally {
@@ -75,7 +79,6 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
 
         {/* Body */}
         <div className="px-6 py-5">
-          {/* Not logged in */}
           {!user ? (
             <div className="flex flex-col items-center gap-4 py-6 text-center">
               <p className="font-body text-on-surface-variant text-sm">
@@ -90,8 +93,27 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* Message field */}
-              <div className="flex flex-col gap-2">
+
+              {/* Title â€” optional */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-pixel text-on-surface-variant text-xs uppercase tracking-widest">
+                    Title
+                  </label>
+                  <span className="font-mono text-on-surface-variant/50 text-xs">optional</span>
+                </div>
+                <input
+                  type="text"
+                  value={title}
+                  maxLength={80}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="e.g. Midnight Thoughts"
+                  className="w-full px-4 py-2.5 bg-surface-container text-on-surface font-body text-sm rounded-xl border border-on-surface/15 focus:border-on-surface/40 focus:outline-none placeholder:text-on-surface-variant/40 transition-colors"
+                />
+              </div>
+
+              {/* Message */}
+              <div className="flex flex-col gap-1.5">
                 <label className="font-pixel text-on-surface-variant text-xs uppercase tracking-widest">
                   Message
                 </label>
@@ -102,7 +124,7 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
                   maxLength={MAX_CHARS}
                   onChange={e => setMessage(e.target.value)}
                   placeholder="Write something to put in the jar..."
-                  className="w-full px-4 py-3 bg-surface-container text-on-surface font-body text-base rounded-xl border border-on-surface/15 focus:border-on-surface/40 focus:outline-none focus:ring-0 resize-none placeholder:text-on-surface-variant/50 transition-colors"
+                  className="w-full px-4 py-3 bg-surface-container text-on-surface font-body text-base rounded-xl border border-on-surface/15 focus:border-on-surface/40 focus:outline-none resize-none placeholder:text-on-surface-variant/50 transition-colors"
                 />
                 <span className={`font-mono text-xs self-end ${remaining < 100 ? 'text-red-500' : 'text-on-surface-variant'}`}>
                   {remaining} left
