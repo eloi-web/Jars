@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
+import { JarData } from '../App';
 
 interface Props {
-  onJarClick: () => void;
+  jars: JarData[];
+  onSelectJar: (jar: JarData) => void;
 }
 
-export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
+export const HomePhysicsWorkspace = ({ jars, onSelectJar }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
@@ -13,6 +15,14 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
 
   const widthRef = useRef(window.innerWidth);
   const heightRef = useRef(window.innerHeight);
+
+  // Keep latest values accessible inside the one-time effect without re-running it
+  const jarsRef = useRef<JarData[]>(jars);
+  const bodyIndexMapRef = useRef<Map<number, number>>(new Map()); // bodyId → loop index
+  const onSelectJarRef = useRef(onSelectJar);
+
+  useEffect(() => { jarsRef.current = jars; }, [jars]);
+  useEffect(() => { onSelectJarRef.current = onSelectJar; }, [onSelectJar]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -91,11 +101,19 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
     Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
       const endPoint = { x: event.mouse.position.x, y: event.mouse.position.y };
       const dist = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
-      if (dist < 5) { // It's a clean click
+      if (dist < 5) {
         const bodies = Matter.Composite.allBodies(world);
         const clickedBodies = Matter.Query.point(bodies, event.mouse.position);
-        if (clickedBodies.some(b => b.render?.sprite?.texture)) {
-          onJarClick();
+        const clickedJar = clickedBodies.find(b => b.render?.sprite?.texture);
+        if (clickedJar) {
+          const idx = bodyIndexMapRef.current.get(clickedJar.id);
+          if (idx !== undefined) {
+            const currentJars = jarsRef.current;
+            if (currentJars.length > 0) {
+              const jar = currentJars[idx % currentJars.length];
+              if (jar) onSelectJarRef.current(jar);
+            }
+          }
         }
       }
     });
@@ -108,6 +126,44 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
       render.canvas.style.cursor = objHovered ? 'pointer' : 'default';
     });
 
+    // Draw jar label (title or owner name) centered on each falling body
+    Matter.Events.on(render, 'afterRender', () => {
+      const ctx = render.context;
+      const currentJars = jarsRef.current;
+      if (!currentJars.length) return;
+
+      const pixelRatio = render.options.pixelRatio || 1;
+      const allBodies = Matter.Composite.allBodies(world);
+
+      ctx.save();
+      ctx.scale(pixelRatio, pixelRatio);
+      ctx.font = '9px "Courier New", Courier, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      allBodies.forEach(body => {
+        if (body.isStatic) return;
+        const idx = bodyIndexMapRef.current.get(body.id);
+        if (idx === undefined) return;
+        const jar = currentJars[idx % currentJars.length];
+        if (!jar) return;
+
+        const rawLabel = jar.title || jar.owner?.name || 'jar';
+        const label = rawLabel.length > 14 ? rawLabel.slice(0, 13) + '\u2026' : rawLabel;
+        const x = body.position.x;
+        const y = body.position.y;
+        const tw = ctx.measureText(label).width;
+
+        // Readable pill background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.62)';
+        ctx.fillRect(x - tw / 2 - 2, y - 7, tw + 4, 14);
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.88)';
+        ctx.fillText(label, x, y);
+      });
+
+      ctx.restore();
+    });
+
     const jarImage = '/jar.png';
     const numJars = window.innerWidth > 768 ? 200 : 100;
 
@@ -115,7 +171,7 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
 
     for (let i = 0; i < numJars; i++) {
       const tid = setTimeout(() => {
-        const size = Math.random() * 110 + 40; // Sizes between 40 and 150
+        const size = Math.random() * 110 + 40;
         const x = Math.random() * widthRef.current;
         const y = -100 - (Math.random() * 200);
 
@@ -132,20 +188,22 @@ export const HomePhysicsWorkspace = ({ onJarClick }: Props) => {
           density: 0.05,
           angle: Math.random() * Math.PI * 2
         });
+        bodyIndexMapRef.current.set(jar.id, i);
         Matter.Composite.add(world, jar);
-      }, i * 20); // Faster dropping
+      }, i * 20);
       timeoutIds.push(tid);
     }
 
     return () => {
       timeoutIds.forEach(clearTimeout);
       resizeObserver.disconnect();
+      bodyIndexMapRef.current.clear();
       Matter.Render.stop(render);
       Matter.Runner.stop(runner);
       if (engineRef.current) Matter.Engine.clear(engineRef.current);
       if (render.canvas) render.canvas.remove();
     };
-  }, [onJarClick]);
+  }, []); // onSelectJar and jars tracked via refs — no re-run needed
 
   return <div ref={containerRef} className="absolute inset-0 z-0 pointer-events-auto jar-canvas-container" />;
 };
