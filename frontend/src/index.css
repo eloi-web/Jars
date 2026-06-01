@@ -46,9 +46,13 @@
   --color-on-background: #e8e8e8;
 }
 
-/* Invert the falling jar sprites to white on dark background */
+/* Invert the falling jar sprites AND the hero jar to white in dark mode */
 .dark .jar-canvas-container {
   filter: invert(1) brightness(0.9);
+}
+
+.dark .hero-jar {
+  filter: invert(1) brightness(0.85);
 }
 
 body {
@@ -60,6 +64,32 @@ body {
 }
 
 @layer utilities {
+
+  /* Jiggle on hover — plays once, re-triggers on each new hover */
+  @keyframes jiggle {
+
+    0%,
+    100% {
+      transform: translateX(0) scale(1);
+    }
+
+    20% {
+      transform: translateX(-4px) scale(1.03);
+    }
+
+    40% {
+      transform: translateX(4px) scale(1.03);
+    }
+
+    60% {
+      transform: translateX(-2px) scale(1.01);
+    }
+
+    80% {
+      transform: translateX(2px) scale(1.01);
+    }
+  }
+
   .animate-wiggle:hover {
     animation: wiggle 1.5s ease-in-out infinite;
   }
