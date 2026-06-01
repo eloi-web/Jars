@@ -4,9 +4,10 @@ import { PhysicsWorkspace, PhysicsWorkspaceRef } from './PhysicsWorkspace';
 interface Props {
   onBack: () => void;
   onOpenCreate: () => void;
+  isDark?: boolean;
 }
 
-export function JarScreen({ onBack }: Props) {
+export function JarScreen({ onBack, isDark = false }: Props) {
   const physicsRef = useRef<PhysicsWorkspaceRef>(null);
 
   // Example text message passed inside - static upon entry
@@ -15,7 +16,7 @@ export function JarScreen({ onBack }: Props) {
   return (
     <div className="h-screen w-full flex flex-col justify-between p-6 md:p-10 relative bg-surface overflow-hidden">
       {/* Physics Canvas Background */}
-      <PhysicsWorkspace ref={physicsRef} defaultText={displayMessage} />
+      <PhysicsWorkspace ref={physicsRef} defaultText={displayMessage} isDark={isDark} />
 
       {/* Top App Bar */}
       <header className="flex justify-between items-start w-full z-30 pointer-events-none">
