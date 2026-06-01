@@ -34,6 +34,10 @@ router.post(
     '/',
     requireAuth,
     [
+        body('title')
+            .optional()
+            .trim()
+            .isLength({ max: 80 }).withMessage('Title must be 80 characters or fewer'),
         body('message')
             .trim()
             .notEmpty().withMessage('Message is required')
@@ -52,9 +56,12 @@ router.post(
         try {
             const jar = await Jar.create({
                 owner: (req as any).userId,
+                title: req.body.title || undefined,
                 message: req.body.message,
                 isPublic: req.body.isPublic ?? true,
             });
+            // Populate owner so the frontend gets name/avatar immediately
+            await jar.populate('owner', 'name avatar');
             res.status(201).json(jar);
         } catch {
             res.status(500).json({ error: 'Internal server error' });
