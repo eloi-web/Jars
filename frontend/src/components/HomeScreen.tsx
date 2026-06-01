@@ -27,7 +27,7 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, o
           <button
             onClick={onToggleDark}
             aria-label="Toggle dark mode"
-            className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full"
+            className="text-on-surface-variant hover:text-on-surface transition-all duration-200 p-1 rounded-full hover:rotate-[20deg] active:scale-90"
           >
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -51,7 +51,7 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, o
           ) : (
             <button
               onClick={onOpenLogin}
-              className="font-pixel text-on-surface font-bold text-base hover:opacity-70 transition-opacity"
+              className="font-pixel text-on-surface font-bold text-base hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 transition-transform duration-150"
             >
               Login
             </button>
@@ -61,15 +61,17 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, o
 
       <main className="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
         <div className="relative flex flex-col items-center group">
+          {/* Soft radial glow so the hero never blends into the falling jars */}
+          <div className="absolute -inset-x-24 -inset-y-16 bg-surface opacity-75 blur-3xl rounded-full pointer-events-none" />
           <img
             src="/jar-hero.png"
             alt="Text Jar"
-            className="w-37.5 md:w-45 lg:w-50 object-contain select-none mb-4 animate-wiggle pointer-events-auto cursor-default"
+            className="hero-jar relative w-37.5 md:w-45 lg:w-50 object-contain select-none mb-4 animate-wiggle pointer-events-auto cursor-default transition-[filter] duration-300"
             draggable="false"
           />
           <button
             onClick={onOpenCreate}
-            className="pointer-events-auto bg-primary text-surface font-pixel text-xl md:text-2xl px-6 py-2 rounded-md hover:scale-105 transition-all shadow-lg z-20"
+            className="relative pointer-events-auto bg-primary text-surface font-pixel text-xl md:text-2xl px-6 py-2 rounded-md shadow-lg hover:shadow-xl hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 transition-shadow duration-150 z-20"
           >
             Create a Jar
           </button>
