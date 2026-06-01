@@ -5,6 +5,7 @@ export interface PhysicsWorkspaceRef { }
 
 interface PhysicsWorkspaceProps {
   defaultText: string;
+  isDark?: boolean;
 }
 
 interface LetterData {
@@ -33,11 +34,15 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspaceProps>(({ defaultText }, ref) => {
+export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspaceProps>(({ defaultText, isDark = false }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const animationFrameRef = useRef<number>(0);
+
+  // Track isDark without re-running the physics useEffect
+  const isDarkRef = useRef(isDark);
+  useEffect(() => { isDarkRef.current = isDark; }, [isDark]);
 
   const bodiesRef = useRef<Record<string, Matter.Body>>({});
   const letterNodesRef = useRef<LetterData[]>([]);
@@ -188,7 +193,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       ctx.font = RENDER_FONT;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#212121';
+      ctx.fillStyle = isDarkRef.current ? '#e8e8e8' : '#212121';
 
       letterNodesRef.current.forEach(node => {
         const body = bodiesRef.current[node.id];
