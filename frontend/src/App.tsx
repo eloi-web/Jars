@@ -117,11 +117,18 @@ export default function App() {
         <JarScreen
           onBack={() => setCurrentScreen('home')}
           onOpenCreate={() => setIsCreateOpen(true)}
+          isDark={isDark}
         />
       )}
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <CreateJarModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+      <CreateJarModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        accessToken={accessToken}
+        user={user}
+        onOpenLogin={() => { setIsCreateOpen(false); setIsLoginOpen(true); }}
+      />
     </>
   );
 }
