@@ -1,29 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { HomePhysicsWorkspace } from './HomePhysicsWorkspace';
-import { User } from '../App';
+import { User, JarData } from '../App';
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 interface Props {
   onNavigateToJar: () => void;
+  onSelectJar: (jar: JarData) => void;
   onOpenLogin: () => void;
   onOpenCreate: () => void;
   user: User | null;
   onLogout: () => void;
   isDark: boolean;
   onToggleDark: () => void;
+  newJar: JarData | null;
+  onNewJarConsumed: () => void;
 }
 
-export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, onLogout, isDark, onToggleDark }: Props) {
+export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCreate, user, onLogout, isDark, onToggleDark, newJar, onNewJarConsumed }: Props) {
+  const [jars, setJars] = useState<JarData[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/jars`)
+      .then(r => r.json())
+      .then(data => setJars(Array.isArray(data) ? data : []))
+      .catch(err => console.error('[HomeScreen] jars fetch error:', err));
+  }, []);
+
+  // Prepend a newly created jar so it immediately appears in the physics world
+  useEffect(() => {
+    if (!newJar) return;
+    setJars(prev => prev.some(j => j._id === newJar._id) ? prev : [newJar, ...prev]);
+    onNewJarConsumed();
+  }, [newJar, onNewJarConsumed]);
+
   return (
     <div className="h-screen w-full relative bg-surface overflow-hidden flex flex-col">
-      <HomePhysicsWorkspace onJarClick={onNavigateToJar} />
+      <HomePhysicsWorkspace jars={jars} onSelectJar={onSelectJar} />
 
+      {/* ── Header ── */}
       <header className="z-10 flex justify-end items-center w-full px-6 md:px-10 py-6 pointer-events-none">
-        {/* Frosted pill — always readable no matter what jars are behind it */}
         <div className="pointer-events-auto flex items-center gap-3 bg-surface/85 backdrop-blur-md rounded-full px-4 py-2 shadow-sm border border-on-surface/10">
           <span className="font-pixel text-on-surface-variant text-sm tracking-widest hidden sm:inline">just a jar</span>
 
-          {/* Dark / light toggle */}
           <button
             onClick={onToggleDark}
             aria-label="Toggle dark mode"
@@ -32,7 +52,6 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, o
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          {/* Thin divider */}
           <span className="w-px h-4 bg-on-surface/20 rounded-full" />
 
           {user ? (
@@ -59,9 +78,9 @@ export function HomeScreen({ onNavigateToJar, onOpenLogin, onOpenCreate, user, o
         </div>
       </header>
 
-      <main className="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-8">
+      {/* ── Hero center ── */}
+      <main className="z-10 absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-24">
         <div className="relative flex flex-col items-center group">
-          {/* Soft radial glow so the hero never blends into the falling jars */}
           <div className="absolute -inset-x-24 -inset-y-16 bg-surface opacity-75 blur-3xl rounded-full pointer-events-none" />
           <img
             src="/jar-hero.png"
