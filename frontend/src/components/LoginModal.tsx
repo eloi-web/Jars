@@ -29,7 +29,7 @@ export function LoginModal({ isOpen, onClose }: Props) {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full border-2 border-outline-variant text-primary bg-surface font-pixel font-bold uppercase tracking-widest rounded-lg py-3 text-sm hover:bg-surface-container transition-colors active:scale-95 flex items-center justify-center gap-3"
+          className="w-full border-2 border-on-surface/20 text-primary bg-surface font-pixel font-bold uppercase tracking-widest rounded-lg py-3 text-sm hover:bg-surface-container hover:-translate-y-0.5 hover:shadow-md hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 active:translate-y-0 transition-all duration-150 flex items-center justify-center gap-3"
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
