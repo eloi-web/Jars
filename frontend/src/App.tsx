@@ -13,11 +13,22 @@ export interface User {
   avatar: string;
 }
 
+export interface JarData {
+  _id: string;
+  title?: string;
+  message: string;
+  isPublic: boolean;
+  owner: { name: string; avatar: string };
+  createdAt: string;
+}
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<'home' | 'jar'>('home');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [selectedJar, setSelectedJar] = useState<JarData | null>(null);
+  const [newJar, setNewJar] = useState<JarData | null>(null);
   // Access token lives only in memory — never in localStorage
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(() => {
@@ -104,20 +115,24 @@ export default function App() {
       {currentScreen === 'home' && (
         <HomeScreen
           onNavigateToJar={() => setCurrentScreen('jar')}
+          onSelectJar={(jar) => { setSelectedJar(jar); setCurrentScreen('jar'); }}
           onOpenLogin={() => setIsLoginOpen(true)}
           onOpenCreate={() => setIsCreateOpen(true)}
           user={user}
           onLogout={handleLogout}
           isDark={isDark}
           onToggleDark={toggleDark}
+          newJar={newJar}
+          onNewJarConsumed={() => setNewJar(null)}
         />
       )}
 
       {currentScreen === 'jar' && (
         <JarScreen
-          onBack={() => setCurrentScreen('home')}
+          onBack={() => { setCurrentScreen('home'); setSelectedJar(null); }}
           onOpenCreate={() => setIsCreateOpen(true)}
           isDark={isDark}
+          jar={selectedJar}
         />
       )}
 
@@ -128,6 +143,7 @@ export default function App() {
         accessToken={accessToken}
         user={user}
         onOpenLogin={() => { setIsCreateOpen(false); setIsLoginOpen(true); }}
+        onJarCreated={(jar) => { setIsCreateOpen(false); setNewJar(jar); }}
       />
     </>
   );
