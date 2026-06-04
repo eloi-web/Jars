@@ -4,9 +4,11 @@ import { X } from 'lucide-react';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  onViewPrivacy?: () => void;
+  onViewTerms?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose }: Props) {
+export function LoginModal({ isOpen, onClose, onViewPrivacy, onViewTerms }: Props) {
   if (!isOpen) return null;
 
   const handleGoogleLogin = () => {
@@ -39,6 +41,25 @@ export function LoginModal({ isOpen, onClose }: Props) {
           </svg>
           Continue with Google
         </button>
+
+        {/* Privacy & Terms links */}
+        <p className="text-xs text-on-surface-variant text-center mt-6 leading-relaxed">
+          By signing in, you agree to our{' '}
+          <button
+            onClick={() => { onClose(); onViewTerms?.(); }}
+            className="text-primary hover:underline font-semibold"
+          >
+            Terms of Service
+          </button>
+          {' '}and{' '}
+          <button
+            onClick={() => { onClose(); onViewPrivacy?.(); }}
+            className="text-primary hover:underline font-semibold"
+          >
+            Privacy Policy
+          </button>
+          .
+        </p>
       </div>
     </div>
   );
