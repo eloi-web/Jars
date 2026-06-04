@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { HomeScreen } from './components/HomeScreen';
 import { JarScreen } from './components/JarScreen';
+import { PrivacyPage } from './components/PrivacyPage';
+import { TermsPage } from './components/TermsPage';
 import { LoginModal } from './components/LoginModal';
 import { CreateJarModal } from './components/CreateJarModal';
 
@@ -23,7 +26,7 @@ export interface JarData {
 }
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<'home' | 'jar'>('home');
+  const [currentScreen, setCurrentScreen] = useState<'home' | 'jar' | 'privacy' | 'terms'>('home');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -124,6 +127,8 @@ export default function App() {
           onToggleDark={toggleDark}
           newJar={newJar}
           onNewJarConsumed={() => setNewJar(null)}
+          onViewPrivacy={() => setCurrentScreen('privacy')}
+          onViewTerms={() => setCurrentScreen('terms')}
         />
       )}
 
@@ -136,7 +141,20 @@ export default function App() {
         />
       )}
 
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      {currentScreen === 'privacy' && (
+        <PrivacyPage onBack={() => setCurrentScreen('home')} />
+      )}
+
+      {currentScreen === 'terms' && (
+        <TermsPage onBack={() => setCurrentScreen('home')} />
+      )}
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onViewPrivacy={() => { setIsLoginOpen(false); setCurrentScreen('privacy'); }}
+        onViewTerms={() => { setIsLoginOpen(false); setCurrentScreen('terms'); }}
+      />
       <CreateJarModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -145,6 +163,9 @@ export default function App() {
         onOpenLogin={() => { setIsCreateOpen(false); setIsLoginOpen(true); }}
         onJarCreated={(jar) => { setIsCreateOpen(false); setNewJar(jar); }}
       />
+
+      {/* Vercel Analytics — disabled in dev, enabled on Vercel */}
+      <Analytics scriptSrc="/_vercel/insights/script.js" />
     </>
   );
 }
