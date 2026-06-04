@@ -65,7 +65,24 @@ body {
 
 @layer utilities {
 
-  /* Gold flash — for newly created jars in the strip */
+  /* Blinking cursor for "type here" hint */
+  @keyframes blink {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .animate-blink {
+    animation: blink 1s step-start infinite;
+  }
+
+  /* Gold flash — for newly created jar bodies in the physics world */
   @keyframes gold-flash {
 
     0%,
