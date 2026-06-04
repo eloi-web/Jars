@@ -5,9 +5,10 @@ import { JarData } from '../App';
 interface Props {
   jars: JarData[];
   onSelectJar: (jar: JarData) => void;
+  goldJarId?: string | null;
 }
 
-export const HomePhysicsWorkspace = ({ jars, onSelectJar }: Props) => {
+export const HomePhysicsWorkspace = ({ jars, onSelectJar, goldJarId }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
@@ -20,9 +21,15 @@ export const HomePhysicsWorkspace = ({ jars, onSelectJar }: Props) => {
   const jarsRef = useRef<JarData[]>(jars);
   const bodyIndexMapRef = useRef<Map<number, number>>(new Map()); // bodyId → loop index
   const onSelectJarRef = useRef(onSelectJar);
+  const goldJarIdRef = useRef(goldJarId ?? null);
+  const goldEndTimeRef = useRef(0);
 
   useEffect(() => { jarsRef.current = jars; }, [jars]);
   useEffect(() => { onSelectJarRef.current = onSelectJar; }, [onSelectJar]);
+  useEffect(() => {
+    goldJarIdRef.current = goldJarId ?? null;
+    if (goldJarId) goldEndTimeRef.current = performance.now() + 5000;
+  }, [goldJarId]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -139,7 +146,7 @@ export const HomePhysicsWorkspace = ({ jars, onSelectJar }: Props) => {
       ctx.scale(pixelRatio, pixelRatio);
       ctx.font = '9px "Courier New", Courier, monospace';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textBaseline = 'top';
 
       allBodies.forEach(body => {
         if (body.isStatic) return;
@@ -150,16 +157,36 @@ export const HomePhysicsWorkspace = ({ jars, onSelectJar }: Props) => {
 
         const rawLabel = jar.title || jar.owner?.name || 'jar';
         const label = rawLabel.length > 14 ? rawLabel.slice(0, 13) + '\u2026' : rawLabel;
-        const x = body.position.x;
-        const y = body.position.y;
-        const tw = ctx.measureText(label).width;
 
-        // Readable pill background
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.62)';
-        ctx.fillRect(x - tw / 2 - 2, y - 7, tw + 4, 14);
-        ctx.fillStyle = 'rgba(20, 20, 20, 0.88)';
+        // Position just below the jar's bounding box — no background
+        const x = body.position.x;
+        const y = body.bounds.max.y + 2;
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.82)';
         ctx.fillText(label, x, y);
       });
+
+      // Pulsing gold glow on the newly created jar bodies
+      const goldEnd = goldEndTimeRef.current;
+      if (goldEnd > 0 && performance.now() < goldEnd) {
+        const goldId = goldJarIdRef.current;
+        const goldIndex = currentJars.findIndex(j => j._id === goldId);
+        if (goldIndex !== -1) {
+          const pulse = 0.35 + 0.35 * Math.sin(performance.now() / 180);
+          ctx.save();
+          allBodies.forEach(body => {
+            if (body.isStatic) return;
+            const idx = bodyIndexMapRef.current.get(body.id);
+            if (idx === undefined || idx % currentJars.length !== goldIndex) return;
+            const bw = (body.bounds.max.x - body.bounds.min.x) / 2 + 6;
+            const bh = (body.bounds.max.y - body.bounds.min.y) / 2 + 6;
+            ctx.fillStyle = `rgba(251, 191, 36, ${pulse})`;
+            ctx.beginPath();
+            ctx.ellipse(body.position.x, body.position.y, bw, bh, body.angle, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.restore();
+        }
+      }
 
       ctx.restore();
     });
