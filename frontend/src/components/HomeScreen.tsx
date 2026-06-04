@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { HomePhysicsWorkspace } from './HomePhysicsWorkspace';
 import { User, JarData } from '../App';
@@ -20,6 +20,8 @@ interface Props {
 
 export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCreate, user, onLogout, isDark, onToggleDark, newJar, onNewJarConsumed }: Props) {
   const [jars, setJars] = useState<JarData[]>([]);
+  const [goldJarId, setGoldJarId] = useState<string | null>(null);
+  const goldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/api/jars`)
@@ -28,16 +30,21 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
       .catch(err => console.error('[HomeScreen] jars fetch error:', err));
   }, []);
 
-  // Prepend a newly created jar so it immediately appears in the physics world
+  // Prepend a newly created jar and flash it gold for 5 s
   useEffect(() => {
     if (!newJar) return;
     setJars(prev => prev.some(j => j._id === newJar._id) ? prev : [newJar, ...prev]);
+    setGoldJarId(newJar._id);
     onNewJarConsumed();
+    if (goldTimerRef.current) clearTimeout(goldTimerRef.current);
+    goldTimerRef.current = setTimeout(() => setGoldJarId(null), 5000);
   }, [newJar, onNewJarConsumed]);
+
+  useEffect(() => () => { if (goldTimerRef.current) clearTimeout(goldTimerRef.current); }, []);
 
   return (
     <div className="h-screen w-full relative bg-surface overflow-hidden flex flex-col">
-      <HomePhysicsWorkspace jars={jars} onSelectJar={onSelectJar} />
+      <HomePhysicsWorkspace jars={jars} onSelectJar={onSelectJar} goldJarId={goldJarId} />
 
       {/* ── Header ── */}
       <header className="z-10 flex justify-end items-center w-full px-6 md:px-10 py-6 pointer-events-none">
