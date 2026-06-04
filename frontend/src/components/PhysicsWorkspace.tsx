@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef } from 'react';
+import React, { useEffect, useRef, useState, forwardRef } from 'react';
 import Matter from 'matter-js';
 
 export interface PhysicsWorkspaceRef { }
@@ -43,6 +43,35 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
   // Track isDark without re-running the physics useEffect
   const isDarkRef = useRef(isDark);
   useEffect(() => { isDarkRef.current = isDark; }, [isDark]);
+
+  // ── Typing UI state ──
+  const [uiMode, setUiMode] = useState<'idle' | 'typing' | 'naming'>('idle');
+  const uiModeRef = useRef<'idle' | 'typing' | 'naming'>('idle');
+  const [fromName, setFromName] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const typedTextRef = useRef('');
+  const typedBodyIdsRef = useRef<Set<string>>(new Set());
+  // Exposed so the React onSubmit handler can clear typed bodies from the world
+  const clearTypedRef = useRef<() => void>(() => { });
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Let typed letters fall as the 'send' animation
+    typedBodyIdsRef.current.forEach(id => {
+      const body = bodiesRef.current[id];
+      if (!body) return;
+      if (body.isStatic) Matter.Body.setStatic(body, false);
+      if (body.isSleeping) Matter.Sleeping.set(body, false);
+      Matter.Body.setVelocity(body, { x: (Math.random() - 0.5) * 2.5, y: Math.random() * 1.5 });
+      Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.18);
+    });
+    typedBodyIdsRef.current.clear();
+    typedTextRef.current = '';
+    uiModeRef.current = 'idle';
+    setUiMode('idle');
+    setFromName('');
+    setIsAnonymous(false);
+  };
 
   const bodiesRef = useRef<Record<string, Matter.Body>>({});
   const letterNodesRef = useRef<LetterData[]>([]);
@@ -187,6 +216,8 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       letterNodesRef.current = newLetterNodes;
     };
 
+    // Tracks whether the visitor has started typing (hides the hint)
+
     const render = () => {
       ctx.clearRect(0, 0, w, h);
 
@@ -209,6 +240,18 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
     buildStaticText(w, h);
     render();
 
+    // Expose the clear-typed-bodies function to the React event handlers above
+    clearTypedRef.current = () => {
+      typedBodyIdsRef.current.forEach(id => {
+        const body = bodiesRef.current[id];
+        if (body) Matter.World.remove(world, body);
+        delete bodiesRef.current[id];
+      });
+      letterNodesRef.current = letterNodesRef.current.filter(n => !typedBodyIdsRef.current.has(n.id));
+      typedBodyIdsRef.current.clear();
+      typedTextRef.current = '';
+    };
+
     // Render loop
     const tick = () => {
       Matter.Engine.update(engine, 1000 / 60);
@@ -218,6 +261,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
 
       if (sm.mode === 'static') {
         letterNodesRef.current.forEach(node => {
+          if (node.lineIdx < 0) return; // typed letter — leave it dynamic
           const body = bodies[node.id];
           if (body && !body.isStatic) {
             Matter.Body.setStatic(body, true);
@@ -262,11 +306,51 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
     animationFrameRef.current = requestAnimationFrame(tick);
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // While the name bar is open, let the HTML input handle all keys
+      if (uiModeRef.current === 'naming') return;
+
       const sm = stateRef.current;
+
+      // Printable character — spawn a falling letter immediately
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Transition from idle to typing on first keystroke
+        if (uiModeRef.current === 'idle') {
+          uiModeRef.current = 'typing';
+          setUiMode('typing');
+        }
+        typedTextRef.current += e.key;
+        const char = e.key;
+        ctx.font = RENDER_FONT;
+        const cw = ctx.measureText(char).width;
+        const charRadius = Math.max(9, Math.min(cw * 0.48, 16));
+        const id = `typed-${Date.now()}-${Math.random()}`;
+        const spawnX = w / 2 + (Math.random() - 0.5) * 80;
+        const spawnY = h * 0.35;
+        const body = Matter.Bodies.circle(spawnX, spawnY, charRadius, {
+          restitution: 0.35,
+          friction: 0.7,
+          frictionStatic: 0.9,
+          density: 0.002,
+          slop: 0.02,
+          label: `letter:${char}`,
+        });
+        Matter.World.add(world, body);
+        bodiesRef.current[id] = body;
+        typedBodyIdsRef.current.add(id);
+        letterNodesRef.current.push({ id, char, targetX: spawnX, targetY: spawnY, lineIdx: -1, charIdx: -1 });
+        return;
+      }
 
       if (e.key === 'Enter') {
         e.preventDefault();
-        if (sm.mode !== 'falling') {
+        // In typing mode with content — open the name bar
+        if (uiModeRef.current === 'typing' && typedTextRef.current.length > 0) {
+          uiModeRef.current = 'naming';
+          setUiMode('naming');
+          return;
+        }
+        // In idle — original fall-all behaviour
+        if (uiModeRef.current === 'idle' && sm.mode !== 'falling') {
           sm.mode = 'falling';
           sm.reviveState = null;
           Object.values(bodiesRef.current).forEach(body => {
@@ -283,7 +367,15 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
 
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (sm.mode === 'falling') {
+        // In typing mode — clear typed letters and go back to idle
+        if (uiModeRef.current === 'typing') {
+          clearTypedRef.current();
+          uiModeRef.current = 'idle';
+          setUiMode('idle');
+          return;
+        }
+        // In idle/falling — original revive behaviour
+        if (uiModeRef.current === 'idle' && sm.mode === 'falling') {
           sm.mode = 'reviving';
 
           let maxDelay = 0;
@@ -291,6 +383,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
           const targets: Record<string, { x: number; y: number; angle: number; startDelayMs: number }> = {};
 
           letterNodesRef.current.forEach(node => {
+            if (node.lineIdx < 0) return; // typed letter — keep it falling
             const body = bodiesRef.current[node.id];
             if (!body) return;
             const startDelayMs = node.lineIdx * INTER_LINE_DELAY_MS;
@@ -337,6 +430,8 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       // Clear refs so the next effect invocation (React StrictMode) starts fresh
       bodiesRef.current = {};
       letterNodesRef.current = [];
+      typedBodyIdsRef.current.clear();
+      typedTextRef.current = '';
       stateRef.current = { mode: 'static', reviveState: null };
       Matter.Engine.clear(engine);
     };
@@ -348,6 +443,61 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
       className="absolute inset-0 z-0 overflow-hidden touch-none pointer-events-auto"
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+      {/* Centered “type here” hint with blinking cursor — visible only in idle */}
+      {uiMode === 'idle' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none">
+          <span
+            className="font-body text-lg italic"
+            style={{ color: isDark ? 'rgba(232,232,232,0.28)' : 'rgba(33,33,33,0.22)' }}
+          >
+            type here<span className="animate-blink not-italic font-normal">|</span>
+          </span>
+        </div>
+      )}
+
+      {/* Name / anonymous bar — appears after Enter while typing */}
+      {uiMode === 'naming' && (
+        <form
+          onSubmit={handleSend}
+          className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 bg-surface/92 backdrop-blur-sm border border-on-surface/15 rounded-full px-5 py-2.5 shadow-lg"
+          style={{ animation: 'slideUp 0.2s ease-out' }}
+        >
+          <span className="font-pixel text-on-surface-variant text-xs whitespace-nowrap">from</span>
+          <input
+            autoFocus
+            type="text"
+            value={fromName}
+            onChange={e => setFromName(e.target.value)}
+            disabled={isAnonymous}
+            placeholder="your name"
+            className="font-body text-sm text-on-surface bg-transparent border-b border-amber-400 outline-none w-28 placeholder:text-on-surface-variant/40 disabled:opacity-30 disabled:cursor-not-allowed pb-0.5"
+            onKeyDown={e => {
+              e.stopPropagation();
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                uiModeRef.current = 'typing';
+                setUiMode('typing');
+                setFromName('');
+                setIsAnonymous(false);
+              }
+            }}
+          />
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={e => setIsAnonymous(e.target.checked)}
+              onKeyDown={e => e.stopPropagation()}
+              className="accent-amber-400"
+            />
+            <span className="font-pixel text-on-surface-variant text-xs">anonymous</span>
+          </label>
+          <span className="font-pixel text-on-surface-variant/40 text-[10px] whitespace-nowrap hidden sm:inline">
+            ↵ to send · esc to edit
+          </span>
+        </form>
+      )}
     </div>
   );
 });
