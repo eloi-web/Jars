@@ -16,9 +16,11 @@ interface Props {
   onToggleDark: () => void;
   newJar: JarData | null;
   onNewJarConsumed: () => void;
+  onViewPrivacy?: () => void;
+  onViewTerms?: () => void;
 }
 
-export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCreate, user, onLogout, isDark, onToggleDark, newJar, onNewJarConsumed }: Props) {
+export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCreate, user, onLogout, isDark, onToggleDark, newJar, onNewJarConsumed, onViewPrivacy, onViewTerms }: Props) {
   const [jars, setJars] = useState<JarData[]>([]);
   const [goldJarId, setGoldJarId] = useState<string | null>(null);
   const goldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,6 +105,25 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
           </button>
         </div>
       </main>
+
+      {/* ── Footer ── */}
+      <footer className="z-10 absolute bottom-0 left-0 right-0 flex justify-center items-center w-full px-6 py-4 pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-4 text-on-surface-variant text-xs font-pixel tracking-widest">
+          <button
+            onClick={onViewPrivacy}
+            className="hover:text-on-surface transition-colors underline underline-offset-2"
+          >
+            Privacy
+          </button>
+          <span className="text-on-surface-variant/30">•</span>
+          <button
+            onClick={onViewTerms}
+            className="hover:text-on-surface transition-colors underline underline-offset-2"
+          >
+            Terms
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
