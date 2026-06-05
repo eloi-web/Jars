@@ -16,9 +16,10 @@ const app = express();
 app.use(helmet());
 
 // ── CORS ────────────────────────────────────────────────────────────────────
+const corsOrigins = (process.env.CLIENT_URL ?? 'http://localhost:3000').split(',').map(url => url.trim());
 app.use(
     cors({
-        origin: process.env.CLIENT_URL ?? 'http://localhost:3000',
+        origin: corsOrigins,
         credentials: true, // allow cookies
     })
 );
