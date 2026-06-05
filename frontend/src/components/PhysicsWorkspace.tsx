@@ -406,6 +406,78 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
 
     window.addEventListener('keydown', handleKeyDown);
 
+    // ── Double-tap detection for mobile ──
+    let lastTapTime = 0;
+    let lastTapPos = { x: 0, y: 0 };
+
+    const handleDoubleTap = (e: TouchEvent) => {
+      const now = Date.now();
+      const touch = e.touches[0] || e.changedTouches[0];
+      const tapPos = { x: touch.clientX, y: touch.clientY };
+
+      // Check if this is a double-tap (within 300ms and 50px of the last tap)
+      const timeDiff = now - lastTapTime;
+      const distance = Math.hypot(tapPos.x - lastTapPos.x, tapPos.y - lastTapPos.y);
+
+      if (timeDiff < 300 && distance < 50) {
+        // Double-tap detected — toggle break/unbreak state
+        const sm = stateRef.current;
+
+        // Only toggle if not currently in typing mode (in typing, ESC handles it)
+        if (uiModeRef.current !== 'typing') {
+          if (sm.mode === 'static') {
+            // Break — start falling
+            sm.mode = 'falling';
+            sm.reviveState = null;
+            Object.values(bodiesRef.current).forEach(body => {
+              Matter.Body.setStatic(body, false);
+              if (body.isSleeping) Matter.Sleeping.set(body, false);
+              Matter.Body.setVelocity(body, {
+                x: (Math.random() - 0.5) * 2.5,
+                y: Math.random() * 1.5,
+              });
+              Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.18);
+            });
+          } else if (sm.mode === 'falling') {
+            // Unbreak — revive to static
+            sm.mode = 'reviving';
+
+            let maxDelay = 0;
+            const starts: Record<string, { x: number; y: number; angle: number }> = {};
+            const targets: Record<string, { x: number; y: number; angle: number; startDelayMs: number }> = {};
+
+            letterNodesRef.current.forEach(node => {
+              if (node.lineIdx < 0) return; // typed letter — keep it falling
+              const body = bodiesRef.current[node.id];
+              if (!body) return;
+              const startDelayMs = node.lineIdx * INTER_LINE_DELAY_MS;
+              if (startDelayMs > maxDelay) maxDelay = startDelayMs;
+              starts[node.id] = { x: body.position.x, y: body.position.y, angle: body.angle };
+              targets[node.id] = { x: node.targetX, y: node.targetY, angle: 0, startDelayMs };
+              Matter.Body.setStatic(body, true);
+              if (body.isSleeping) Matter.Sleeping.set(body, false);
+            });
+
+            sm.reviveState = {
+              startTime: performance.now(),
+              totalDurationMs: maxDelay + MOVE_DURATION_MS,
+              starts,
+              targets,
+            };
+          }
+        }
+
+        // Reset tap tracking to prevent multiple triggers
+        lastTapTime = 0;
+      } else {
+        // Not a double-tap — save for next comparison
+        lastTapTime = now;
+        lastTapPos = tapPos;
+      }
+    };
+
+    canvas.addEventListener('touchend', handleDoubleTap, { passive: true });
+
     const resizeHandler = () => {
       const size = updateSize();
       w = size.w;
@@ -426,6 +498,7 @@ export const PhysicsWorkspace = forwardRef<PhysicsWorkspaceRef, PhysicsWorkspace
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', resizeHandler);
+      canvas.removeEventListener('touchend', handleDoubleTap);
       cancelAnimationFrame(animationFrameRef.current);
       // Clear refs so the next effect invocation (React StrictMode) starts fresh
       bodiesRef.current = {};
