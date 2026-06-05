@@ -105,12 +105,13 @@ export const HomePhysicsWorkspace = ({ jars, onSelectJar, goldJarId }: Props) =>
       startPoint = { x: event.mouse.position.x, y: event.mouse.position.y };
     });
 
-    Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
-      const endPoint = { x: event.mouse.position.x, y: event.mouse.position.y };
+    // Handle jar selection — both mouse and touch
+    const handleJarClick = (mousePos: { x: number; y: number }) => {
+      const endPoint = { x: mousePos.x, y: mousePos.y };
       const dist = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
       if (dist < 5) {
         const bodies = Matter.Composite.allBodies(world);
-        const clickedBodies = Matter.Query.point(bodies, event.mouse.position);
+        const clickedBodies = Matter.Query.point(bodies, mousePos);
         const clickedJar = clickedBodies.find(b => b.render?.sprite?.texture);
         if (clickedJar) {
           const idx = bodyIndexMapRef.current.get(clickedJar.id);
@@ -122,6 +123,34 @@ export const HomePhysicsWorkspace = ({ jars, onSelectJar, goldJarId }: Props) =>
             }
           }
         }
+      }
+    };
+
+    Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
+      handleJarClick(event.mouse.position);
+    });
+
+    // Touch events for mobile
+    render.canvas.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const rect = render.canvas.getBoundingClientRect();
+        startPoint = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top,
+        };
+      }
+    });
+
+    render.canvas.addEventListener('touchend', (e: TouchEvent) => {
+      if (e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const rect = render.canvas.getBoundingClientRect();
+        const touchPos = {
+          x: touch.clientX - rect.left,
+          y: touch.clientY - rect.top,
+        };
+        handleJarClick(touchPos);
       }
     });
 
