@@ -27,7 +27,7 @@ export function JarScreen({ onBack, isDark = false, jar }: Props) {
           </button>
           {/* Title pill — shown when title exists, otherwise author label */}
           {jar?.title ? (
-            <span className="inline-block font-pixel text-xs bg-on-surface/10 text-on-surface px-3 py-1 rounded-full mt-1 max-w-[220px] truncate">
+            <span className="inline-block font-pixel text-xs bg-on-surface/10 text-on-surface px-3 py-1 rounded-full mt-1 max-w-55 truncate">
               {jar.title}
             </span>
           ) : jar?.owner ? (

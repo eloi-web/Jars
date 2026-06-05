@@ -56,7 +56,7 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
           <button
             onClick={onToggleDark}
             aria-label="Toggle dark mode"
-            className="text-on-surface-variant hover:text-on-surface transition-all duration-200 p-1 rounded-full hover:rotate-[20deg] active:scale-90"
+            className="text-on-surface-variant hover:text-on-surface transition-all duration-200 p-1 rounded-full hover:rotate-20 active:scale-90"
           >
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -68,7 +68,7 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
               {user.avatar && (
                 <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" />
               )}
-              <span className="font-pixel text-on-surface text-sm font-bold max-w-[120px] truncate">{user.name}</span>
+              <span className="font-pixel text-on-surface text-sm font-bold max-w-30 truncate">{user.name}</span>
               <button
                 onClick={onLogout}
                 className="font-pixel text-on-surface-variant hover:text-on-surface text-xs underline underline-offset-2 transition-colors"
@@ -79,7 +79,7 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
           ) : (
             <button
               onClick={onOpenLogin}
-              className="font-pixel text-on-surface font-bold text-base hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 transition-transform duration-150"
+              className="font-pixel text-on-surface font-bold text-base hover:animate-[jiggle_0.4s_ease-in-out] active:scale-95 transition-transform duration-150"
             >
               Login
             </button>
@@ -99,7 +99,7 @@ export function HomeScreen({ onNavigateToJar, onSelectJar, onOpenLogin, onOpenCr
           />
           <button
             onClick={onOpenCreate}
-            className="relative pointer-events-auto bg-primary text-surface font-pixel text-xl md:text-2xl px-6 py-2 rounded-md shadow-lg hover:shadow-xl hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 transition-shadow duration-150 z-20"
+            className="relative pointer-events-auto bg-primary text-surface font-pixel text-xl md:text-2xl px-6 py-2 rounded-md shadow-lg hover:shadow-xl hover:animate-[jiggle_0.4s_ease-in-out] active:scale-95 transition-shadow duration-150 z-20"
           >
             Create a Jar
           </button>

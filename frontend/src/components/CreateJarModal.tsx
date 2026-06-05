@@ -71,7 +71,7 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
           <h2 className="font-pixel text-xl font-bold text-on-surface tracking-wide">New Jar</h2>
           <button
             onClick={onClose}
-            className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:[animation:jiggle_0.3s_ease-in-out] active:scale-90"
+            className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:animate-[jiggle_0.3s_ease-in-out] active:scale-90"
           >
             <X size={20} />
           </button>
@@ -86,7 +86,7 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
               </p>
               <button
                 onClick={onOpenLogin}
-                className="font-pixel font-bold bg-primary text-surface px-6 py-2 rounded-lg hover:[animation:jiggle_0.4s_ease-in-out] active:scale-95 transition-transform"
+                className="font-pixel font-bold bg-primary text-surface px-6 py-2 rounded-lg hover:animate-[jiggle_0.4s_ease-in-out] active:scale-95 transition-transform"
               >
                 Sign in
               </button>
@@ -153,7 +153,7 @@ export function CreateJarModal({ isOpen, onClose, accessToken, user, onOpenLogin
               <button
                 type="submit"
                 disabled={loading || message.trim().length === 0}
-                className="w-full py-3 bg-primary text-surface font-pixel font-bold tracking-widest uppercase text-base rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:[animation:jiggle_0.4s_ease-in-out] active:enabled:scale-95 transition-transform flex items-center justify-center gap-2"
+                className="w-full py-3 bg-primary text-surface font-pixel font-bold tracking-widest uppercase text-base rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:animate-[jiggle_0.4s_ease-in-out] active:enabled:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 {loading ? 'Creating...' : 'Create Jar'}
