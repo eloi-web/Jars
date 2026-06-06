@@ -8,8 +8,9 @@ const router = Router();
 
 const COOKIE_OPTS = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always true — Render/Vercel use HTTPS proxy
     sameSite: 'lax' as const,
+    path: '/' as const,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
 };
 
