@@ -43,6 +43,7 @@ src/
     ├── PhysicsWorkspace.tsx      # Matter.js letter-physics canvas (jar)
     ├── CreateJarModal.tsx        # "New Jar" form modal
     └── LoginModal.tsx            # Login / Google sign-in modal
+    └── ...
 ```
 
 ### Component overview
@@ -53,16 +54,17 @@ src/
 
 **`HomePhysicsWorkspace.tsx`** — Sets up a Matter.js `Render` + `Runner` pipeline. Spawns jar sprites at randomised positions above the viewport with staggered `setTimeout` delays. Handles mouse drag via `MouseConstraint` and distinguishes a click (≤ 5 px drag) from a drag to trigger `onJarClick`.
 
-**`JarScreen.tsx`** — The view of a single jar. Renders `PhysicsWorkspace` with a hardcoded demo message, a back button, and a keyboard-hint footer.
+**`JarScreen.tsx`** — The view of a single jar. Renders `PhysicsWorkspace` with the user message, a back button, date, time, and a keyboard-hint footer.
 
 **`PhysicsWorkspace.tsx`** — Custom canvas render loop (no Matter.js renderer). Builds one circular rigid body per non-space character, positions them as centred text lines, and implements three modes:
+
 - `static` — bodies frozen at target positions.
 - `falling` — bodies released as dynamic, gravity pulls them down.
 - `reviving` — bodies tweened back to targets with a staggered per-line delay using `easeOutCubic`.
 
-**`CreateJarModal.tsx`** — Controlled form with jar name + initial message fields. Currently calls `onClose` on submit (persistence not yet wired).
+**`CreateJarModal.tsx`** — Controlled form with jar name + initial message fields..
 
-**`LoginModal.tsx`** — Login form (name + password) with a Google sign-in button. Auth not yet wired.
+**`LoginModal.tsx`** — Login modal with a Google sign-in button.
 
 ---
 
