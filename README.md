@@ -99,6 +99,11 @@ pnpm preview      # serve the built bundle locally
 pnpm lint         # runs tsc --noEmit
 ```
 
+### Update packages
+
+```bash
+pnpm update       # updates every package availabale in node modules to its latest
+pnpm update -i    # to view a menu and selectively apply available updates
 ---
 
 ## Keyboard Controls (Jar screen)
@@ -133,3 +138,5 @@ const INTER_LINE_DELAY_MS = 100;   // stagger delay between lines
 ### Theme colours
 
 All design tokens are defined in [src/index.css](src/index.css) under the `@theme` block using Tailwind v4's CSS variable syntax.
+
+Happy Coding and leave a star if you're stunned.
